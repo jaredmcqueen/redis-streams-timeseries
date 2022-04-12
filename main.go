@@ -19,9 +19,8 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func redisConsumer(batchChan chan<- []map[string]interface{}, endpoint string, startID string, batchSize int64) {
+func redisConsumer(batchChan chan<- []map[string]interface{}, endpoint string, startID string) {
 	rctx := context.Background()
-	log.Println("connecting to redis endpoint", endpoint)
 	rdb := redis.NewClient(&redis.Options{
 		Addr: endpoint,
 	})
@@ -29,22 +28,20 @@ func redisConsumer(batchChan chan<- []map[string]interface{}, endpoint string, s
 	// test redis connection
 	_, err := rdb.Ping(rctx).Result()
 	if err != nil {
-		log.Fatal("could not connect to redis", err)
+		log.Fatal("could not connect to redis streams endpoint", err)
 	}
-	log.Println("connected")
+	log.Println("connected to redis streams endpoint", endpoint)
 
 	pit := startID
 	for {
 		trades, err := rdb.XRead(rctx, &redis.XReadArgs{
 			Streams: []string{"trades", pit},
-			Count:   batchSize,
-			Block:   0,
 		}).Result()
 		if err != nil {
 			log.Fatal("error XRead: ", err)
 		}
 
-		bigBatch := make([]map[string]interface{}, 0, batchSize)
+		bigBatch := make([]map[string]interface{}, 0, len(trades))
 
 		for _, stream := range trades {
 			for _, message := range stream.Messages {
@@ -58,7 +55,6 @@ func redisConsumer(batchChan chan<- []map[string]interface{}, endpoint string, s
 
 func timeseriesWriter(batchChan <-chan []map[string]interface{}, endpoint string) {
 	rctx := context.Background()
-	log.Println("connecting to redis endpoint", endpoint)
 	rdb := redis.NewClient(&redis.Options{
 		Addr: endpoint,
 	})
@@ -66,9 +62,9 @@ func timeseriesWriter(batchChan <-chan []map[string]interface{}, endpoint string
 	// test redis connection
 	_, err := rdb.Ping(rctx).Result()
 	if err != nil {
-		log.Fatal("could not connect to redis", err)
+		log.Fatal("could not connect to redis timeseries endpoint", err)
 	}
-	log.Println("connected")
+	log.Println("connected to redis timeseries endpoint", endpoint)
 
 	for {
 		select {
@@ -79,7 +75,7 @@ func timeseriesWriter(batchChan <-chan []map[string]interface{}, endpoint string
 				pipe.Do(rctx,
 					"TS.ADD",
 					//key
-					fmt.Sprintf("trades.%v.price", v["S"]),
+					fmt.Sprintf("trades:%v:price", v["S"]),
 					//ts
 					"*",
 					//value
@@ -107,11 +103,8 @@ func main() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 
-	go redisConsumer(batchChan, config.RedisEndpoint, config.StartID, config.TimescaleDBBatchSize)
-
-	for i := 0; i < config.TimescaleDBWorkers; i++ {
-		go timeseriesWriter(batchChan, config.RedisEndpoint)
-	}
+	go redisConsumer(batchChan, config.RedisStreamsEndpoint, config.StartID)
+	go timeseriesWriter(batchChan, config.RedisTimeseriesEndpoint)
 
 	go func() {
 		for {
