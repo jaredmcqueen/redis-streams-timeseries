@@ -80,6 +80,8 @@ func timeseriesWriter(batchChan <-chan []map[string]interface{}, endpoint string
 					"*",
 					//value
 					fmt.Sprintf("%v", v["p"]),
+					"ON_DUPLICATE",
+					"FIRST",
 					"LABELS",
 					"symbol", v["S"],
 					"type", "trade",
