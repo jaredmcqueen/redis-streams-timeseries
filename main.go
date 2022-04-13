@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"os/signal"
 	"time"
@@ -14,10 +13,6 @@ import (
 )
 
 var tsdbCounter int32
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 func redisConsumer(batchChan chan<- []map[string]interface{}, endpoint string, startID string) {
 	rctx := context.Background()
@@ -77,8 +72,8 @@ func timeseriesWriter(batchChan <-chan []map[string]interface{}, endpoint string
 					"TS.ADD",
 					//key
 					fmt.Sprintf("trades:%v:price", v["S"]),
-					//ts
-					"*",
+					//time
+					v["t"],
 					//value
 					fmt.Sprintf("%v", v["p"]),
 					"ON_DUPLICATE",
@@ -92,7 +87,7 @@ func timeseriesWriter(batchChan <-chan []map[string]interface{}, endpoint string
 					//key
 					fmt.Sprintf("trades:%v:size", v["S"]),
 					//ts
-					"*",
+					v["t"],
 					//value
 					fmt.Sprintf("%v", v["s"]),
 					"ON_DUPLICATE",
