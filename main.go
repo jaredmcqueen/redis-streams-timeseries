@@ -84,7 +84,21 @@ func timeseriesWriter(batchChan <-chan []map[string]interface{}, endpoint string
 					"FIRST",
 					"LABELS",
 					"symbol", v["S"],
-					"type", "trade",
+					"type", "price",
+				)
+				pipe.Do(rctx,
+					"TS.ADD",
+					//key
+					fmt.Sprintf("trades:%v:size", v["S"]),
+					//ts
+					"*",
+					//value
+					fmt.Sprintf("%v", v["s"]),
+					"ON_DUPLICATE",
+					"FIRST",
+					"LABELS",
+					"symbol", v["S"],
+					"type", "size",
 				)
 			}
 			_, err := pipe.Exec(rctx)
