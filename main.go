@@ -36,6 +36,7 @@ func redisConsumer(batchChan chan<- []map[string]interface{}, endpoint string, s
 	for {
 		trades, err := rdb.XRead(rctx, &redis.XReadArgs{
 			Streams: []string{"trades", pit},
+			Count:   1000,
 		}).Result()
 		if err != nil {
 			log.Fatal("error XRead: ", err)
