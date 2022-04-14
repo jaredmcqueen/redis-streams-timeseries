@@ -66,8 +66,13 @@ func timeseriesWriter(batchChan <-chan []map[string]interface{}, endpoint string
 		select {
 		case batch := <-batchChan:
 			pipe := rdb.Pipeline()
+
+			// make a set to store unique symbols
+			symbolSet := make(map[string]bool)
+
 			for _, v := range batch {
 				tsdbCounter++
+				symbolSet[fmt.Sprintf("%s", v["S"])] = true
 				pipe.Do(rctx,
 					"TS.ADD",
 					//key
@@ -96,6 +101,10 @@ func timeseriesWriter(batchChan <-chan []map[string]interface{}, endpoint string
 					"symbol", v["S"],
 					"type", "size",
 				)
+			}
+
+			for k := range symbolSet {
+				pipe.SAdd(rctx, "symbols", k)
 			}
 			_, err := pipe.Exec(rctx)
 			if err != nil {
