@@ -73,6 +73,16 @@ func timeseriesWriter(batchChan <-chan []map[string]interface{}, endpoint string
 			for _, v := range batch {
 				tsdbCounter++
 				symbolSet[fmt.Sprintf("%s", v["S"])] = true
+
+				// "t": fmt.Sprintf("%v", t.Timestamp.UnixMilli()),
+				// "S": t.Symbol,
+				// "p": fmt.Sprintf("%v", t.Price),
+				// "i": fmt.Sprintf("%v", t.ID),
+				// "s": fmt.Sprintf("%v", t.Size),
+				// "c": fmt.Sprintf("%v", t.Conditions),
+				// "x": t.Exchange,
+				// "z": t.Tape,
+
 				pipe.Do(rctx,
 					"TS.ADD",
 					//key
@@ -84,8 +94,11 @@ func timeseriesWriter(batchChan <-chan []map[string]interface{}, endpoint string
 					"ON_DUPLICATE",
 					"FIRST",
 					"LABELS",
-					"symbol", v["S"],
 					"type", "price",
+					"symbol", v["S"],
+					"conditions", v["c"],
+					"exchange", v["x"],
+					"tape", v["z"],
 				)
 				pipe.Do(rctx,
 					"TS.ADD",
@@ -98,8 +111,11 @@ func timeseriesWriter(batchChan <-chan []map[string]interface{}, endpoint string
 					"ON_DUPLICATE",
 					"FIRST",
 					"LABELS",
-					"symbol", v["S"],
 					"type", "size",
+					"symbol", v["S"],
+					"conditions", v["c"],
+					"exchange", v["x"],
+					"tape", v["z"],
 				)
 			}
 
