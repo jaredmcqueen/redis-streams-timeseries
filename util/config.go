@@ -6,6 +6,7 @@ type Config struct {
 	RedisStreamsEndpoint    string `mapstructure:"REDIS_STREAMS_ENDPOINT"`
 	RedisTimeseriesEndpoint string `mapstructure:"REDIS_TIMESERIES_ENDPOINT"`
 	StartID                 string `mapstructure:"REDIS_STREAM_START"`
+	Workers                 int    `mapstructure:"WORKERS"`
 }
 
 // LoadConfig loads app.env if it exists and sets envars

@@ -141,7 +141,10 @@ func main() {
 	signal.Notify(signalChan, os.Interrupt)
 
 	go redisConsumer(batchChan, config.RedisStreamsEndpoint, config.StartID)
-	go timeseriesWriter(batchChan, config.RedisTimeseriesEndpoint)
+
+	for i := 0; i < config.Workers; i++ {
+		go timeseriesWriter(batchChan, config.RedisTimeseriesEndpoint)
+	}
 
 	go func() {
 		for {
