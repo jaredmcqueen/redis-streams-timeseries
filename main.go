@@ -31,7 +31,7 @@ func redisConsumer(batchChan chan<- []map[string]interface{}, endpoint string, s
 	for {
 		trades, err := rdb.XRead(rctx, &redis.XReadArgs{
 			Streams: []string{"trades", pit},
-			Count:   1000,
+			Count:   10_000,
 		}).Result()
 		if err != nil {
 			log.Fatal("error XRead: ", err)
@@ -136,7 +136,7 @@ func main() {
 		log.Fatal("could not load config", err)
 	}
 
-	batchChan := make(chan []map[string]interface{}, 100)
+	batchChan := make(chan []map[string]interface{}, 1_000_000)
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 
